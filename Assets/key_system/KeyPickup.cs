@@ -1,12 +1,33 @@
+using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.XR;
 using UnityEngine.XR.Interaction.Toolkit;
 
 public class KeyPickup : MonoBehaviour
 {
-    public XRController rightHandController; // Assign the right hand controller in the inspector
     public InputHelpers.Button activationButton = InputHelpers.Button.Trigger; // Choose the button to use
-
+    public float activationThreshold = 0.1f; // Threshold for button press
     private bool isHovering = false;
+    private InputDevice rightHandDevice;
+    private PlayerInventory playerInventory;
+
+    private void Start()
+    {
+        List<InputDevice> devices = new List<InputDevice>();
+        InputDevices.GetDevicesWithCharacteristics(InputDeviceCharacteristics.Right | InputDeviceCharacteristics.Controller, devices);
+
+        if (devices.Count > 0)
+        {
+            rightHandDevice = devices[0]; // Assume the first right-hand controller found is the one we want
+        }
+        else
+        {
+            Debug.LogWarning("No right-hand controller found!");
+        }
+
+        // Find the PlayerInventory component in the player's hierarchy
+        playerInventory = FindObjectOfType<PlayerInventory>();
+    }
 
     private void OnTriggerEnter(Collider other)
     {
@@ -26,11 +47,13 @@ public class KeyPickup : MonoBehaviour
 
     private void Update()
     {
-        if (isHovering && rightHandController)
+        if (isHovering && rightHandDevice.isValid)
         {
-            if (InputHelpers.IsPressed(rightHandController.inputDevice, activationButton, out bool isPressed) && isPressed)
+            bool isPressed = false;
+            rightHandDevice.IsPressed(activationButton, out isPressed, activationThreshold);
+
+            if (isPressed)
             {
-                PlayerInventory playerInventory = rightHandController.GetComponentInParent<PlayerInventory>();
                 if (playerInventory != null)
                 {
                     playerInventory.PickupKey();
