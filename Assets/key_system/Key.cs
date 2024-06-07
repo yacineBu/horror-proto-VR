@@ -10,8 +10,10 @@ public class Key : MonoBehaviour
         GetComponent<TriggerZone>().onEnterEvent.AddListener(insideDoor);
     }
 
+    // On supprime la clé et on déverouille les portes d'entrées
     public void insideDoor(GameObject go)
     {
         go.SetActive(false);
+        FrontDoorController.Instance.UnlockDoor();
     }
 }
