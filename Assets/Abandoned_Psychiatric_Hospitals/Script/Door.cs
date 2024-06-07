@@ -1,5 +1,8 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.XR;
+using System.Collections.Generic;
 
 public class Door : MonoBehaviour
 {
@@ -9,8 +12,7 @@ public class Door : MonoBehaviour
     public float DoorOpenAngle = 90.0f;//угол вращения 
     private Vector3 defaulRot;
     private Vector3 openRot;
-    public Text txt;//text
-    // public InputActionManager inputActionManager;
+    public Text txt;//text 
     // Start is called before the first frame update
     void Start()
     {
@@ -33,11 +35,56 @@ public class Door : MonoBehaviour
         {
             open = !open;
         }
+
+        /*var leftHand = InputSystem.GetDevice<XRController>(CommonUsages.LeftHand);
+        var rightHand = InputSystem.GetDevice<XRController>(CommonUsages.RightHand);
+
+        if (leftHand != null && rightHand != null)
+        {
+            if ((leftHand.device.TryGetFeatureValue(CommonUsages.triggerButton, out bool leftTriggerPressed) && leftTriggerPressed) ||
+                (rightHand.device.TryGetFeatureValue(CommonUsages.triggerButton, out bool rightTriggerPressed) && rightTriggerPressed))
+            {
+                if (trig)
+                {
+                    open = !open;
+                }
+            }
+        }*/
+
+        bool leftTriggerPressed = false;
+        bool rightTriggerPressed = false;
+
+        var leftHandDevices = new List<UnityEngine.XR.InputDevice>();
+        var rightHandDevices = new List<UnityEngine.XR.InputDevice>();
+        UnityEngine.XR.InputDevices.GetDevicesAtXRNode(UnityEngine.XR.XRNode.LeftHand, leftHandDevices);
+        UnityEngine.XR.InputDevices.GetDevicesAtXRNode(UnityEngine.XR.XRNode.RightHand, rightHandDevices);
+
+        foreach (var device in leftHandDevices)
+        {
+            device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out leftTriggerPressed);
+            if (leftTriggerPressed)
+                Debug.Log("LEFT : " + leftTriggerPressed);
+            if (leftTriggerPressed) break;
+        }
+
+        foreach (var device in rightHandDevices)
+        {
+            device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out rightTriggerPressed);
+            if (rightTriggerPressed)
+                Debug.Log("RIGHT : " + rightTriggerPressed);
+            if (rightTriggerPressed) break;
+        }
+
+        if ((leftTriggerPressed || rightTriggerPressed) && trig)
+        {
+            open = !open;
+        }
+
         if (trig)
         {
             if (open)
             {
-                //  txt.text = "Close E";
+                //txt.text = "Close E";
             }
             else
             {
@@ -47,8 +94,10 @@ public class Door : MonoBehaviour
     }
     private void OnTriggerEnter(Collider coll)//вход и выход в\из  триггера 
     {
+        Debug.Log("OnTriggerEnter");
         if (coll.tag == "Player")
         {
+            Debug.Log("oui");
             if (!open)
             {
                 //txt.text = "Close E ";
@@ -62,8 +111,10 @@ public class Door : MonoBehaviour
     }
     private void OnTriggerExit(Collider coll)//вход и выход в\из  триггера 
     {
+        Debug.Log("OnTriggerExit");
         if (coll.tag == "Player")
         {
+            Debug.Log("oui");
             //txt.text = " ";
             trig = false;
         }
