@@ -13,7 +13,10 @@ public class Key : MonoBehaviour
     // On supprime la clé et on déverouille les portes d'entrées
     public void insideDoor(GameObject go)
     {
-        go.SetActive(false);
-        FrontDoorController.Instance.UnlockDoor();
+        if (go.tag == "Key")
+        {
+            go.SetActive(false);
+            FrontDoorController.Instance.UnlockDoor();
+        }
     }
 }
