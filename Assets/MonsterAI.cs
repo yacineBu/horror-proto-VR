@@ -1,5 +1,8 @@
+using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 
 public class MonsterAI : MonoBehaviour
 {
@@ -10,9 +13,16 @@ public class MonsterAI : MonoBehaviour
     public float chaseDistance = 10.0f; // Distance à partir de laquelle le monstre commence à poursuivre le joueur
     public float fieldOfView = 45.0f; // Champ de vision du monstre en degrés
     public float maxHeightDifference = 4.0f; // Différence de hauteur maximale pour voir le joueur
+    private bool end;
+
+    public float jumpScareDistance = 2.0f; // Distance pour le jumpscare
+    public GameObject jumpScareCamera; // Caméra pour le jumpscare
+    public float shakeDuration = 1.0f; // Durée du tremblement
+    public float shakeMagnitude = 0.2f; // Magnitude du tremblement
 
     void Start()
     {
+        end = false;
         agent = GetComponent<NavMeshAgent>();
         currentPatrolIndex = 0;
         GotoNextPatrolPoint();
@@ -33,20 +43,72 @@ public class MonsterAI : MonoBehaviour
         {
             this.gameObject.GetComponent<Animator>().SetInteger("moving", 1);
         }
-        // Si le monstre est proche du joueur et peut le voir, commence à le poursuivre
+
+        CheckForJumpScare();
+
+        if (!end) {
+            // Si le monstre est proche du joueur et peut le voir, commence à le poursuivre
+            float distanceToPlayer = Vector3.Distance(player.position, transform.position);
+            if (distanceToPlayer <= chaseDistance && CanSeePlayer())
+            {
+                agent.destination = player.position;
+            }
+            else
+            {
+                // Si le monstre est arrivé à son point de patrouille, passe au suivant
+                if (!agent.pathPending && agent.remainingDistance < 0.5f)
+                {
+                    GotoNextPatrolPoint();
+                }
+            }
+        }
+    }
+
+    void CheckForJumpScare()
+    {
         float distanceToPlayer = Vector3.Distance(player.position, transform.position);
-        if (distanceToPlayer <= chaseDistance && CanSeePlayer())
+        if (distanceToPlayer <= jumpScareDistance)
         {
-            agent.destination = player.position;
+            this.gameObject.GetComponent<Animator>().SetInteger("moving", 8);
+            jumpScareCamera.SetActive(true);
+            StartCoroutine(CameraShake());
+            agent.ResetPath();
+            agent.velocity = Vector3.zero;
+            agent.isStopped = true;
+            agent.destination = player.position ;
+            end = true;
+            StartCoroutine(RestartSceneAfterDelay(3f));
         }
         else
         {
-            // Si le monstre est arrivé à son point de patrouille, passe au suivant
-            if (!agent.pathPending && agent.remainingDistance < 0.5f)
-            {
-                GotoNextPatrolPoint();
-            }
+            jumpScareCamera.SetActive(false);
+            agent.isStopped = false;
         }
+    }
+    IEnumerator RestartSceneAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    IEnumerator CameraShake()
+    {
+        Vector3 originalPosition = jumpScareCamera.transform.localPosition;
+        float elapsedTime = 0f;
+
+        while (elapsedTime < shakeDuration)
+        {
+            float xOffset = Random.Range(-1f, 1f) * shakeMagnitude;
+            float yOffset = Random.Range(-1f, 1f) * shakeMagnitude;
+
+            jumpScareCamera.transform.localPosition = new Vector3(originalPosition.x + xOffset, originalPosition.y + yOffset, originalPosition.z);
+
+            elapsedTime += Time.deltaTime;
+
+            yield return null;
+        }
+
+        jumpScareCamera.transform.localPosition = originalPosition;
     }
 
     bool CanSeePlayer()
