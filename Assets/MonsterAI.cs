@@ -6,34 +6,28 @@ using UnityEngine.SceneManagement;
 
 public class MonsterAI : MonoBehaviour
 {
-    public Transform[] patrolPoints;  // Points de patrouille
-    private int currentPatrolIndex;   // Index actuel du point de patrouille
     private NavMeshAgent agent;       // Référence au NavMeshAgent
     public Transform player;          // Référence au joueur
-    public float chaseDistance = 3.0f; // Distance à partir de laquelle le monstre commence à poursuivre le joueur
+    public float chaseDistance = 5.0f; // Distance à partir de laquelle le monstre commence à poursuivre le joueur
     public float fieldOfView = 45.0f; // Champ de vision du monstre en degrés
+    public float maxHeightDifference = 4.0f; // Différence de hauteur maximale pour voir le joueur
     private bool end;
 
     public float jumpScareDistance = 2.0f; // Distance pour le jumpscare
     public GameObject jumpScareCamera; // Caméra pour le jumpscare
     public float shakeDuration = 1.0f; // Durée du tremblement
     public float shakeMagnitude = 0.2f; // Magnitude du tremblement
+    public float wanderRadius = 10.0f; // Rayon pour les déplacements aléatoires
+    public float wanderInterval = 5.0f; // Intervalle entre les changements de destination aléatoires
+
+    private float nextWanderTime;
 
     void Start()
     {
         end = false;
         agent = GetComponent<NavMeshAgent>();
-        currentPatrolIndex = 0;
-        GotoNextPatrolPoint();
-    }
-
-    void GotoNextPatrolPoint()
-    {
-        if (patrolPoints.Length == 0)
-            return;
-
-        agent.destination = patrolPoints[currentPatrolIndex].position;
-        currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
+        nextWanderTime = Time.time + wanderInterval;
+        SetRandomDestination();
     }
 
     void Update()
@@ -45,19 +39,20 @@ public class MonsterAI : MonoBehaviour
 
         CheckForJumpScare();
 
-        if (!end) {
+        if (!end)
+        {
             // Si le monstre est proche du joueur et peut le voir, commence à le poursuivre
-            float distanceToPlayer = Vector3.Distance(player.position, transform.position);
-            if (distanceToPlayer <= chaseDistance && CanSeePlayer())
+            if (CanSeePlayer())
             {
                 agent.destination = player.position;
             }
             else
             {
-                // Si le monstre est arrivé à son point de patrouille, passe au suivant
-                if (!agent.pathPending && agent.remainingDistance < 0.5f)
+                // Déplace le monstre de façon aléatoire s'il n'est pas en train de poursuivre le joueur
+                if (Time.time >= nextWanderTime && !agent.pathPending && agent.remainingDistance < 0.5f)
                 {
-                    GotoNextPatrolPoint();
+                    SetRandomDestination();
+                    nextWanderTime = Time.time + wanderInterval;
                 }
             }
         }
@@ -65,7 +60,7 @@ public class MonsterAI : MonoBehaviour
 
     void CheckForJumpScare()
     {
-        float distanceToPlayer = Vector3.Distance(player.position, transform.position);
+        float distanceToPlayer = GetPathDistance(transform.position, player.position);
         if (distanceToPlayer <= jumpScareDistance)
         {
             this.gameObject.GetComponent<Animator>().SetInteger("moving", 8);
@@ -74,7 +69,7 @@ public class MonsterAI : MonoBehaviour
             agent.ResetPath();
             agent.velocity = Vector3.zero;
             agent.isStopped = true;
-            agent.destination = player.position ;
+            agent.destination = player.position;
             end = true;
             StartCoroutine(RestartSceneAfterDelay(3f));
         }
@@ -84,6 +79,7 @@ public class MonsterAI : MonoBehaviour
             agent.isStopped = false;
         }
     }
+
     IEnumerator RestartSceneAfterDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
@@ -122,9 +118,47 @@ public class MonsterAI : MonoBehaviour
             // Effectuer un raycast vers le joueur
             if (Physics.Raycast(transform.position + Vector3.up, directionToPlayer, out hit, chaseDistance))
             {
-                return true;
+                // Vérifier si le raycast touche le joueur
+                if (hit.transform == player)
+                {
+                    // Vérifiez la distance sur le NavMesh
+                    float navMeshDistance = GetPathDistance(transform.position, player.position);
+                    if (navMeshDistance <= chaseDistance)
+                    {
+                        return true;
+                    }
+                }
             }
         }
         return false;
+    }
+
+    float GetPathDistance(Vector3 startPoint, Vector3 endPoint)
+    {
+        NavMeshPath path = new NavMeshPath();
+        if (NavMesh.CalculatePath(startPoint, endPoint, NavMesh.AllAreas, path))
+        {
+            float distance = 0.0f;
+            if (path.corners.Length > 1)
+            {
+                for (int i = 1; i < path.corners.Length; i++)
+                {
+                    distance += Vector3.Distance(path.corners[i - 1], path.corners[i]);
+                }
+            }
+            return distance;
+        }
+        return float.MaxValue; // Retourne une valeur maximale si le chemin n'est pas trouvé
+    }
+
+    void SetRandomDestination()
+    {
+        Vector3 randomDirection = Random.insideUnitSphere * wanderRadius;
+        randomDirection += transform.position;
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(randomDirection, out hit, wanderRadius, 1))
+        {
+            agent.destination = hit.position;
+        }
     }
 }
