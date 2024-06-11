@@ -18,6 +18,11 @@ public class FrontDoor : MonoBehaviour
     {
         if(FrontDoorController.Instance.doorUnlocked)
         {
+            if (Input.GetKeyDown(KeyCode.E) && trig)
+            {
+                FrontDoorController.Instance.open = !FrontDoorController.Instance.open;
+            }
+
             // Si la porte est déverouillé, on check la collision et la grip 
             bool leftTriggerPressed = false;
             bool rightTriggerPressed = false;

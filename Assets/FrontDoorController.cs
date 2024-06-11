@@ -6,7 +6,6 @@ using System.Collections.Generic;
 
 public class FrontDoorController : MonoBehaviour
 {
-    [SerializeField] GameObject[] doors;
     public float smooth = 2.0f;
     public float DoorOpenAngle = 90.0f;
     private Vector3 defaulRot;
@@ -30,15 +29,9 @@ public class FrontDoorController : MonoBehaviour
         if (doorUnlocked)
         {
             if (open)
-            {
-                foreach(GameObject door in doors)
-                    door.transform.eulerAngles = Vector3.Slerp(transform.eulerAngles, openRot, Time.deltaTime * smooth);
-            }
+                transform.eulerAngles = Vector3.Slerp(transform.eulerAngles, openRot, Time.deltaTime * smooth);
             else
-            {
-                foreach (GameObject door in doors)
-                    door.transform.eulerAngles = Vector3.Slerp(transform.eulerAngles, defaulRot, Time.deltaTime * smooth);
-            }
+                transform.eulerAngles = Vector3.Slerp(transform.eulerAngles, defaulRot, Time.deltaTime * smooth);
         }
     }
 
