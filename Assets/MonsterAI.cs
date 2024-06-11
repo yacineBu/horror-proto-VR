@@ -41,14 +41,12 @@ public class MonsterAI : MonoBehaviour
 
         if (!end)
         {
-            // Si le monstre est proche du joueur et peut le voir, commence à le poursuivre
             if (CanSeePlayer())
             {
                 agent.destination = player.position;
             }
             else
             {
-                // Déplace le monstre de façon aléatoire s'il n'est pas en train de poursuivre le joueur
                 if (Time.time >= nextWanderTime && !agent.pathPending && agent.remainingDistance < 0.5f)
                 {
                     SetRandomDestination();
@@ -63,15 +61,23 @@ public class MonsterAI : MonoBehaviour
         float distanceToPlayer = GetPathDistance(transform.position, player.position);
         if (distanceToPlayer <= jumpScareDistance)
         {
-            this.gameObject.GetComponent<Animator>().SetInteger("moving", 8);
-            jumpScareCamera.SetActive(true);
-            StartCoroutine(CameraShake());
-            agent.ResetPath();
-            agent.velocity = Vector3.zero;
-            agent.isStopped = true;
-            agent.destination = player.position;
-            end = true;
-            StartCoroutine(RestartSceneAfterDelay(3f));
+            RaycastHit hit;
+            Vector3 directionToPlayer = (player.position - transform.position).normalized;
+            if (Physics.Raycast(transform.position + Vector3.up, directionToPlayer, out hit, chaseDistance))
+            {
+                if (hit.transform == player)
+                {
+                    this.gameObject.GetComponent<Animator>().SetInteger("moving", 8);
+                    jumpScareCamera.SetActive(true);
+                    StartCoroutine(CameraShake());
+                    agent.ResetPath();
+                    agent.velocity = Vector3.zero;
+                    agent.isStopped = true;
+                    agent.destination = player.position;
+                    end = true;
+                    StartCoroutine(RestartSceneAfterDelay(3f));
+                }
+            }
         }
         else
         {
@@ -111,17 +117,13 @@ public class MonsterAI : MonoBehaviour
         Vector3 directionToPlayer = (player.position - transform.position).normalized;
         float angle = Vector3.Angle(transform.forward, directionToPlayer);
 
-        // Vérifiez si le joueur est dans le champ de vision
         if (angle < fieldOfView / 2)
         {
             RaycastHit hit;
-            // Effectuer un raycast vers le joueur
             if (Physics.Raycast(transform.position + Vector3.up, directionToPlayer, out hit, chaseDistance))
             {
-                // Vérifier si le raycast touche le joueur
                 if (hit.transform == player)
                 {
-                    // Vérifiez la distance sur le NavMesh
                     float navMeshDistance = GetPathDistance(transform.position, player.position);
                     if (navMeshDistance <= chaseDistance)
                     {
@@ -130,6 +132,8 @@ public class MonsterAI : MonoBehaviour
                 }
             }
         }
+        float distanceToPlayer = GetPathDistance(transform.position, player.position);
+        if (distanceToPlayer < 3f) return true;
         return false;
     }
 
@@ -148,7 +152,7 @@ public class MonsterAI : MonoBehaviour
             }
             return distance;
         }
-        return float.MaxValue; // Retourne une valeur maximale si le chemin n'est pas trouvé
+        return float.MaxValue;
     }
 
     void SetRandomDestination()
@@ -156,9 +160,13 @@ public class MonsterAI : MonoBehaviour
         Vector3 randomDirection = Random.insideUnitSphere * wanderRadius;
         randomDirection += transform.position;
         NavMeshHit hit;
-        if (NavMesh.SamplePosition(randomDirection, out hit, wanderRadius, 1))
+        if (NavMesh.SamplePosition(randomDirection, out hit, wanderRadius, NavMesh.AllAreas))
         {
-            agent.destination = hit.position;
+            // Vérifiez que la nouvelle position est au même niveau ou étage
+            if (Mathf.Abs(hit.position.y - transform.position.y) <= maxHeightDifference)
+            {
+                agent.destination = hit.position;
+            }
         }
     }
 }
