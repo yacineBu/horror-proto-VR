@@ -10,9 +10,8 @@ public class MonsterAI : MonoBehaviour
     private int currentPatrolIndex;   // Index actuel du point de patrouille
     private NavMeshAgent agent;       // Référence au NavMeshAgent
     public Transform player;          // Référence au joueur
-    public float chaseDistance = 10.0f; // Distance à partir de laquelle le monstre commence à poursuivre le joueur
+    public float chaseDistance = 3.0f; // Distance à partir de laquelle le monstre commence à poursuivre le joueur
     public float fieldOfView = 45.0f; // Champ de vision du monstre en degrés
-    public float maxHeightDifference = 4.0f; // Différence de hauteur maximale pour voir le joueur
     private bool end;
 
     public float jumpScareDistance = 2.0f; // Distance pour le jumpscare
@@ -113,13 +112,6 @@ public class MonsterAI : MonoBehaviour
 
     bool CanSeePlayer()
     {
-        // Vérifiez la différence de hauteur
-        float heightDifference = Mathf.Abs(player.position.y - transform.position.y);
-        if (heightDifference > maxHeightDifference)
-        {
-            return false;
-        }
-
         Vector3 directionToPlayer = (player.position - transform.position).normalized;
         float angle = Vector3.Angle(transform.forward, directionToPlayer);
 
