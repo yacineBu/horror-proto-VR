@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class Key : MonoBehaviour
 {
+    public AudioSource audio;
 
     private void Start()
     {
@@ -15,6 +16,7 @@ public class Key : MonoBehaviour
     {
         if (go.tag == "Key")
         {
+            audio.Play();
             go.SetActive(false);
             FrontDoorController.Instance.UnlockDoor();
         }
